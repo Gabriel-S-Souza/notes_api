@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"com.notes/notes/internal/backend"
 	"com.notes/notes/internal/db"
 	"com.notes/notes/internal/models"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	serverPort := "8080"
-	db.DataBaseUrl = "localhost:6379"
-	db.DataBasePassword = ""
+	godotenv.Load()
+	serverPort := os.Getenv("SERVER_PORT")
+	db.DataBaseUrl = os.Getenv("DB_URL")
+	db.DataBasePassword = os.Getenv("DB_PASSWORD")
 
 	router := mux.NewRouter()
 	router.HandleFunc("/api", GivenWellcome).Methods("GET")
@@ -92,6 +95,7 @@ func DeleteNote(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeResponse(status int, body interface{}, w http.ResponseWriter) {
+	fmt.Println("writeResponse ", status, body)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	payload, _ := json.Marshal(body)
