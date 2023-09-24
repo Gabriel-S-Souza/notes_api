@@ -26,10 +26,19 @@ func main() {
 	router.HandleFunc("/api/notes", ReadAllNote).Methods("GET")
 	router.HandleFunc("/api/notes", WriteNote).Methods("POST")
 	router.HandleFunc("/api/notes/{id}", DeleteNote).Methods("DELETE")
-	err := http.ListenAndServe(":"+serverPort, router)
+	router.HandleFunc("/api/notes", DeleteAllNotes).Methods("DELETE")
+	err := http.ListenAndServeTLS(":"+serverPort, "certs/server.crt", "certs/server.key", router)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func writeResponse(status int, body interface{}, w http.ResponseWriter) {
+	fmt.Println("writeResponse")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	payload, _ := json.Marshal(body)
+	w.Write(payload)
 }
 
 func GivenWellcome(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +62,7 @@ func ReadNote(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReadAllNote(w http.ResponseWriter, r *http.Request) {
-	notes, err := backend.GetAllNote()
+	notes, err := backend.GetAllNotes()
 	if err != nil {
 		writeResponse(http.StatusInternalServerError, map[string]string{"error": err.Error()}, w)
 		return
@@ -94,10 +103,11 @@ func DeleteNote(w http.ResponseWriter, r *http.Request) {
 	writeResponse(http.StatusOK, map[string]string{"message": "Note deleted", "key": key}, w)
 }
 
-func writeResponse(status int, body interface{}, w http.ResponseWriter) {
-	fmt.Println("writeResponse ", status, body)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	payload, _ := json.Marshal(body)
-	w.Write(payload)
+func DeleteAllNotes(w http.ResponseWriter, r *http.Request) {
+	err := backend.DeleteAllNotes()
+	if err != nil {
+		writeResponse(http.StatusInternalServerError, map[string]string{"error": err.Error()}, w)
+		return
+	}
+	writeResponse(http.StatusOK, map[string]string{"message": "All notes deleted"}, w)
 }

@@ -11,6 +11,24 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	DataBaseUrl      string
+	DataBasePassword string
+	redisClient      *redis.Client
+	ctx              = context.Background()
+)
+
+var GetDataBase = func() *redis.Client {
+	if redisClient == nil {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     DataBaseUrl,
+			Password: DataBasePassword,
+			DB:       0,
+		})
+	}
+	return redisClient
+}
+
 var GetNote = func(key string) (*models.Note, error) {
 	db := GetDataBase()
 	val, err := db.Get(ctx, key).Result()
@@ -27,7 +45,7 @@ var GetNote = func(key string) (*models.Note, error) {
 	return note, nil
 }
 
-var GetAllNote = func() ([]*models.Note, error) {
+var GetAllNotes = func() ([]*models.Note, error) {
 	db := GetDataBase()
 	keys, err := db.Keys(ctx, "*").Result()
 	if err != nil {
@@ -68,20 +86,17 @@ var DeleteNote = func(key string) error {
 	return nil
 }
 
-var (
-	DataBaseUrl      string
-	DataBasePassword string
-	redisClient      *redis.Client
-	ctx              = context.Background()
-)
-
-var GetDataBase = func() *redis.Client {
-	if redisClient == nil {
-		redisClient = redis.NewClient(&redis.Options{
-			Addr:     DataBaseUrl,
-			Password: DataBasePassword,
-			DB:       0,
-		})
+var DeleteAllNotes = func() error {
+	db := GetDataBase()
+	keys, err := db.Keys(ctx, "*").Result()
+	if err != nil {
+		return err
 	}
-	return redisClient
+	for _, key := range keys {
+		err := DeleteNote(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

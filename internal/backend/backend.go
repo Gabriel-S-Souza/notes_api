@@ -25,8 +25,8 @@ func GetNote(key string) (*models.Note, error) {
 	return note, nil
 }
 
-func GetAllNote() ([]*models.Note, error) {
-	notes, err := db.GetAllNote()
+func GetAllNotes() ([]*models.Note, error) {
+	notes, err := db.GetAllNotes()
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +50,15 @@ func SaveNote(note *models.Note) (string, error) {
 func DeleteNote(key string) error {
 	fmt.Println("DeleteNote")
 	err := db.DeleteNote(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteAllNotes() error {
+	fmt.Println("DeleteAllNote")
+	err := db.DeleteAllNotes()
 	if err != nil {
 		return err
 	}
