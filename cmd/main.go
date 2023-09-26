@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"com.notes/notes/internal/backend"
 	"com.notes/notes/internal/db"
@@ -26,6 +27,7 @@ func main() {
 	router.HandleFunc("/api/notes", ReadAllNote).Methods("GET")
 	router.HandleFunc("/api/notes", WriteNote).Methods("POST")
 	router.HandleFunc("/api/notes/{id}", DeleteNote).Methods("DELETE")
+	router.HandleFunc("/api/notes/{id}", UpdateNote).Methods("PUT")
 	router.HandleFunc("/api/notes", DeleteAllNotes).Methods("DELETE")
 	err := http.ListenAndServeTLS(":"+serverPort, "certs/server.crt", "certs/server.key", router)
 	if err != nil {
@@ -47,16 +49,15 @@ func GivenWellcome(w http.ResponseWriter, r *http.Request) {
 
 func ReadNote(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	key := vars["id"]
-	note, err := backend.GetNote(key)
+	id := vars["id"]
+	note, err := backend.GetNote(id)
 	if err != nil {
-		if err.Error() == "key not found" {
+		if strings.Contains(err.Error(), "not found") {
 			writeResponse(http.StatusNotFound, map[string]string{"error": err.Error()}, w)
-			return
 		} else {
-			writeResponse(http.StatusInternalServerError, map[string]string{"error": err.Error()}, w)
-			return
+			writeResponse(http.StatusBadRequest, map[string]string{"error": err.Error()}, w)
 		}
+		return
 	}
 	writeResponse(http.StatusOK, note, w)
 }
@@ -80,27 +81,54 @@ func WriteNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("note ", note)
-
-	key, err := backend.SaveNote(&note)
+	id, err := backend.SaveNote(&note)
 	if err != nil {
 		writeResponse(http.StatusBadRequest, map[string]string{"error": err.Error()}, w)
 		return
 	}
 
-	writeResponse(http.StatusOK, map[string]string{"key": key}, w)
+	writeResponse(http.StatusOK, map[string]string{"id": id}, w)
+}
+
+func UpdateNote(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	var note models.Note
+
+	if err := decoder.Decode(&note); err != nil {
+		writeResponse(http.StatusBadRequest, map[string]string{"error": err.Error()}, w)
+		return
+	}
+
+	note.Id = id
+	id, err := backend.UpdateNote(&note)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeResponse(http.StatusNotFound, map[string]string{"error": err.Error()}, w)
+		} else {
+			writeResponse(http.StatusBadRequest, map[string]string{"error": err.Error()}, w)
+		}
+		return
+	}
+
+	writeResponse(http.StatusOK, map[string]string{"id": id}, w)
 }
 
 func DeleteNote(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	key := vars["id"]
-	fmt.Println("key ", key)
-	err := backend.DeleteNote(key)
+	id := vars["id"]
+	err := backend.DeleteNote(id)
 	if err != nil {
-		writeResponse(http.StatusInternalServerError, map[string]string{"error": err.Error()}, w)
+		if strings.Contains(err.Error(), "not found") {
+			writeResponse(http.StatusNotFound, map[string]string{"error": err.Error()}, w)
+		} else {
+			writeResponse(http.StatusBadRequest, map[string]string{"error": err.Error()}, w)
+		}
 		return
 	}
-	writeResponse(http.StatusOK, map[string]string{"message": "Note deleted", "key": key}, w)
+	writeResponse(http.StatusOK, map[string]string{"message": "Note deleted", "id": id}, w)
 }
 
 func DeleteAllNotes(w http.ResponseWriter, r *http.Request) {

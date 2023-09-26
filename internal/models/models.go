@@ -1,7 +1,8 @@
 package models
 
 type Note struct {
-	Data string `json:"data"`
-	Once bool   `json:"once"`
-	Id   string `json:"id"`
+	Id           string `json:"id"`
+	Title        string `json:"title"`
+	Content      string `json:"content"`
+	ReminderDate string `json:"reminderDate"`
 }

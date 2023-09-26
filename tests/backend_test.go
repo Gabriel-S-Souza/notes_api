@@ -1,31 +1,37 @@
 package backend_test
 
 import (
+	"reflect"
 	"testing"
 
 	"com.notes/notes/internal/backend"
-	"com.notes/notes/internal/db"
+	"com.notes/notes/internal/db_postgres"
 	"com.notes/notes/internal/models"
 )
 
 func TestGetNoteOk(t *testing.T) {
 	// Given
-	db.GetNote = func(key string) (*models.Note, error) {
+	db_postgres.GetNote = func(key string) (*models.Note, error) {
 		return &models.Note{
-			Data: "OK",
-			Once: false,
+			Title:        "OK",
+			Content:      "OK",
+			Id:           "1",
+			ReminderDate: "2023-09-29T10:00:00Z",
 		}, nil
 	}
 
 	// When
-	note, err := backend.GetNote("key")
+	note, err := backend.GetNote("1")
 
 	// Then
 	if err != nil {
 		t.Errorf("GetNote() error = %v", err)
 		return
 	}
-	if note.Data != "OK" {
-		t.Errorf("GetNote() data = %v", note.Data)
+	if note == nil || note.Title == "" || note.Content == "" || note.Id == "" || note.ReminderDate == "" {
+		t.Errorf("GetNote() = %v", note)
+	}
+	if reflect.TypeOf(note) != reflect.TypeOf(&models.Note{}) {
+		t.Errorf("GetNote() = %v", note)
 	}
 }
